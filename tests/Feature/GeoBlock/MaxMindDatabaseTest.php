@@ -89,7 +89,7 @@ class MaxMindDatabaseTest extends TestCase
             "download.db-ip.com/free/dbip-country-lite-{$previousMonth}.mmdb.gz" => Http::response(gzencode(file_get_contents($this->fixture))),
         ]);
 
-        $this->artisan('geoip:update')->assertSuccessful();
+        $this->artisan('geoip:install')->assertSuccessful();
 
         Http::assertSentCount(2);
         Http::assertSent(fn ($request) => ! $request->hasHeader('Authorization'));

@@ -18,7 +18,12 @@ class UpdateGeoIpDatabaseCommand extends Command
     protected $signature = 'geoip:update
         {--source= : "dbip" (Standard, ohne Account) oder "maxmind" (Lizenzschlüssel nötig)}';
 
-    protected $description = 'Die IP-Länderdatenbank herunterladen bzw. aktualisieren';
+    /**
+     * @var list<string>
+     */
+    protected $aliases = ['geoip:install'];
+
+    protected $description = 'Die IP-Länderdatenbank installieren bzw. aktualisieren';
 
     public function handle(): int
     {
@@ -54,7 +59,14 @@ class UpdateGeoIpDatabaseCommand extends Command
             File::deleteDirectory($workDir);
         }
 
-        $this->components->info("Länderdatenbank aktualisiert ({$type}): {$target}");
+        $this->components->info("Länderdatenbank installiert ({$type}): {$target}");
+
+        if (! config('geoblock.enabled')) {
+            $this->components->bulletList([
+                'Nächster Schritt: eigene IP prüfen mit `php artisan geoip:lookup DEINE-IP`',
+                'Danach in der .env GEOBLOCK_ENABLED=true setzen und `php artisan optimize` ausführen',
+            ]);
+        }
 
         return self::SUCCESS;
     }
