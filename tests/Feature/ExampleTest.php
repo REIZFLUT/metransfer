@@ -9,10 +9,19 @@ class ExampleTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_returns_a_successful_response()
+    public function test_home_redirects_to_dashboard()
     {
-        $response = $this->get(route('home'));
+        $this->get(route('home'))->assertRedirect('/dashboard');
+    }
 
-        $response->assertOk();
+    public function test_registration_is_disabled()
+    {
+        $this->get('/register')->assertNotFound();
+        $this->post('/register', [
+            'name' => 'Test',
+            'email' => 'test@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertNotFound();
     }
 }
