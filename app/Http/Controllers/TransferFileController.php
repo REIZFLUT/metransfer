@@ -6,6 +6,7 @@ use App\Http\Requests\Transfers\StoreTransferFileRequest;
 use App\Http\Resources\TransferFileResource;
 use App\Models\Transfer;
 use App\Models\TransferFile;
+use App\Support\SecureDownload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -67,7 +68,7 @@ class TransferFileController extends Controller
 
         abort_unless($file->isComplete(), 404);
 
-        return response()->download(
+        return SecureDownload::file(
             Storage::disk(Transfer::disk())->path($file->path),
             $file->original_name,
         );

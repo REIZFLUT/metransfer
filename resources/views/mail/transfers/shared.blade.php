@@ -1,5 +1,5 @@
 <x-mail::message>
-# {{ $transfer->displayTitle() }}
+# {{ \App\Support\Markdown::escape($transfer->displayTitle()) }}
 
 **{{ $sender->name }}** hat dir {{ $files->count() === 1 ? 'eine Datei' : $files->count().' Dateien' }} ({{ \Illuminate\Support\Number::fileSize($files->sum('size'), 1) }}) geschickt.
 
@@ -17,7 +17,7 @@ Dateien herunterladen
 | Datei | Größe |
 |:------|------:|
 @foreach ($files->take(15) as $file)
-| {{ str_replace('|', '\|', $file->original_name) }} | {{ \Illuminate\Support\Number::fileSize($file->size, 1) }} |
+| {{ \App\Support\Markdown::escape($file->original_name) }} | {{ \Illuminate\Support\Number::fileSize($file->size, 1) }} |
 @endforeach
 @if ($files->count() > 15)
 | … und {{ $files->count() - 15 }} weitere | |

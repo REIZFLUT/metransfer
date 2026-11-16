@@ -336,6 +336,27 @@ systemctl restart metransfer-queue
 
 Zu sichern sind `database/database.sqlite`, `storage/app/private/transfers/` und `.env` (enthält `APP_KEY` – ohne ihn sind 2FA-Geheimnisse nicht mehr lesbar).
 
+## Sicherheit
+
+**Schutz vor Schadcode in Uploads:**
+
+- Hochgeladene Dateien liegen in `storage/app/private` – außerhalb des öffentlichen Ordners `public/` – und werden nur unter einer zufälligen UUID **ohne Dateiendung** gespeichert. Der Webserver kann sie weder direkt ausliefern noch als PHP ausführen.
+- Downloads werden immer als `application/octet-stream` mit `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff` und `Content-Security-Policy: sandbox` ausgeliefert. Auch eine hochgeladene HTML- oder SVG-Datei wird dadurch nie im Browser unter deiner Domain ausgeführt.
+- Dateinamen werden beim Upload bereinigt (keine Pfade, keine Steuerzeichen) und in Mails escaped.
+- Hochladen können nur eingeloggte Benutzer (keine Registrierung, optional Länder-Sperre und 2FA/Passkeys).
+
+**Sicherheits-Header für die App:** Content-Security-Policy mit Nonce, `X-Frame-Options: DENY`, `Referrer-Policy: same-origin` (Download-Tokens gelangen nicht an fremde Seiten), `Permissions-Policy`, HSTS in Produktion.
+
+**Checkliste für den Server:**
+
+1. Document Root zeigt auf **`public/`** – prüfen: `https://DEINE-DOMAIN/.env` und `https://DEINE-DOMAIN/storage/logs/` müssen 404/403 liefern.
+2. `APP_ENV=production` und `APP_DEBUG=false`.
+3. HTTPS erzwingen (in Plesk: _Hosting & DNS → Hosting → „Permanente SEO-sichere 301-Weiterleitung von HTTP zu HTTPS“_).
+4. Für deinen Account 2FA und einen Passkey einrichten.
+5. Dateirechte: `storage/`, `bootstrap/cache/` und `database/` schreibbar für den Webserver-Benutzer, alles andere nur lesbar.
+
+Hinweis: Hochgeladene Dateien werden nicht auf Viren geprüft. MeTransfer führt sie nie aus – Empfänger sollten heruntergeladene Dateien aber wie jede andere Datei aus dem Internet behandeln.
+
 ## Tests
 
 ```bash

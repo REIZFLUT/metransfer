@@ -6,6 +6,7 @@ use App\Actions\Transfers\RecordTransferDownload;
 use App\Http\Resources\TransferFileResource;
 use App\Models\Transfer;
 use App\Models\TransferFile;
+use App\Support\SecureDownload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -81,7 +82,7 @@ class PublicTransferController extends Controller
 
         $this->recordDownload->handle($transfer, $request, $transferFile);
 
-        return response()->download(
+        return SecureDownload::file(
             Storage::disk(Transfer::disk())->path($transferFile->path),
             $transferFile->original_name,
         );
@@ -121,6 +122,7 @@ class PublicTransferController extends Controller
         }, $zipName.'.zip', [
             'Content-Type' => 'application/zip',
             'X-Accel-Buffering' => 'no',
+            ...SecureDownload::headers(),
         ]);
     }
 

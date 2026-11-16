@@ -1,0 +1,3 @@
+# Defense in depth: this directory must never be served by the web server.
+# (The document root has to be the "public" directory.)
+Require all denied
