@@ -142,19 +142,20 @@ _Websites & Domains → Domain → Laravel_ (bzw. _Manage Laravel Application_):
 
     `APP_KEY` mit _Artisan → `key:generate`_ erzeugen, falls leer.
 
-3. Im Reiter **Deployment** als Deploy-Skript (Plesk führt es nach jedem Pull aus):
+3. Im Reiter **Deployment** die Schritte _Fetch_, _Deploy source code from Git_, _Install composer.json dependencies_, _Install package.json dependencies_ und **Run deployment script** aktivieren. Als Deployment-Skript (_Edit script_):
 
     ```bash
-    composer install --no-dev --optimize-autoloader --no-interaction
-    npm ci
     npm run build
     touch database/database.sqlite
     php artisan migrate --force
+    [ -f storage/app/geoip/country.mmdb ] || php artisan geoip:install
     php artisan optimize
     php artisan queue:restart
     ```
 
-    (Je nach Toolkit-Version heißen die Felder etwas anders – entscheidend ist, dass diese Befehle nach jedem Pull laufen.)
+    Composer- und npm-Pakete installiert das Toolkit selbst (Schritte 4 und 5). Falls im Deploy-Protokoll eine falsche PHP-Version auftaucht, `php` durch den vollen Pfad ersetzen, z. B. `/opt/plesk/php/8.4/bin/php`.
+
+    > Wegen `php artisan optimize` ist die Konfiguration gecacht: Nach jeder Änderung an der `.env` einmal `php artisan optimize` ausführen (oder neu deployen).
 
 4. Ersten Benutzer anlegen – im Toolkit unter _Artisan_ oder per SSH:
 
