@@ -184,7 +184,9 @@ class TransferUploadTest extends TestCase
 
         $this->get(route('dashboard'))->assertOk()->assertInertia(fn ($page) => $page
             ->component('dashboard')
-            ->has('transfers', 1));
+            ->has('transfers', 1)
+            ->has('disk.free')
+            ->has('disk.total'));
 
         $this->get(route('transfers.show', $transfer))->assertOk()->assertInertia(fn ($page) => $page
             ->component('transfers/show')

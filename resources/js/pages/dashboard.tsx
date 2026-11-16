@@ -1,10 +1,21 @@
+import type { ReactNode } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import { Download, HardDrive, Lock, Plus, Send, Upload } from 'lucide-react';
+import {
+    Database,
+    Download,
+    HardDrive,
+    Lock,
+    Plus,
+    Send,
+    Upload,
+} from 'lucide-react';
 import { CopyButton } from '@/components/copy-link';
 import ExpiryBadge from '@/components/expiry-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { formatBytes, formatDate } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import transfers from '@/routes/transfers';
 import type { Transfer } from '@/types';
@@ -12,35 +23,84 @@ import type { Transfer } from '@/types';
 type Props = {
     transfers: Transfer[];
     stats: { active: number; downloads: number; storage: number };
+    disk: { free: number; total: number } | null;
 };
 
 function Stat({
     icon: Icon,
     label,
     value,
+    hint,
+    children,
+    iconClassName,
 }: {
     icon: typeof Send;
     label: string;
     value: string;
+    hint?: string;
+    children?: ReactNode;
+    iconClassName?: string;
 }) {
     return (
         <Card className="gap-0 py-4">
             <CardContent className="flex items-center gap-4 px-4">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div
+                    className={cn(
+                        'flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary',
+                        iconClassName,
+                    )}
+                >
                     <Icon className="size-5" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                     <div className="text-sm text-muted-foreground">{label}</div>
-                    <div className="text-xl font-semibold tabular-nums">
+                    <div className="text-xl font-semibold whitespace-nowrap tabular-nums">
                         {value}
                     </div>
+                    {children}
+                    {hint && (
+                        <div className="mt-1 truncate text-xs text-muted-foreground">
+                            {hint}
+                        </div>
+                    )}
                 </div>
             </CardContent>
         </Card>
     );
 }
 
-export default function Dashboard({ transfers: items, stats }: Props) {
+function DiskStat({ disk }: { disk: { free: number; total: number } }) {
+    const usedPercent = ((disk.total - disk.free) / disk.total) * 100;
+    const freePercent = 100 - usedPercent;
+    const critical = freePercent < 5;
+    const low = freePercent < 15;
+
+    return (
+        <Stat
+            icon={Database}
+            label="Freier Speicher"
+            value={formatBytes(disk.free)}
+            hint={`von ${formatBytes(disk.total)} · ${Math.round(usedPercent)} % belegt`}
+            iconClassName={cn(
+                low && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                critical && 'bg-red-500/10 text-red-600 dark:text-red-400',
+            )}
+        >
+            <Progress
+                value={usedPercent}
+                className="mt-2 h-1.5"
+                indicatorClassName={cn(
+                    low && 'bg-amber-500',
+                    critical && 'bg-red-500',
+                )}
+                aria-label={`${Math.round(usedPercent)} % belegt`}
+                title={`${Math.round(usedPercent)} % belegt`}
+            />
+        </Stat>
+    );
+}
+
+export default function Dashboard({ transfers: items, stats, disk }: Props) {
     return (
         <>
             <Head title="Transfers" />
@@ -62,7 +122,12 @@ export default function Dashboard({ transfers: items, stats }: Props) {
                     </Button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div
+                    className={cn(
+                        'grid gap-4 sm:grid-cols-2',
+                        disk ? 'xl:grid-cols-4' : 'lg:grid-cols-3',
+                    )}
+                >
                     <Stat
                         icon={Send}
                         label="Aktive Transfers"
@@ -78,6 +143,7 @@ export default function Dashboard({ transfers: items, stats }: Props) {
                         label="Belegter Speicher"
                         value={formatBytes(stats.storage)}
                     />
+                    {disk && <DiskStat disk={disk} />}
                 </div>
 
                 {items.length === 0 ? (

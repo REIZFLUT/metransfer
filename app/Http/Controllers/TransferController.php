@@ -8,6 +8,7 @@ use App\Http\Requests\Transfers\PublishTransferRequest;
 use App\Http\Requests\Transfers\UpdateTransferRequest;
 use App\Http\Resources\TransferResource;
 use App\Models\Transfer;
+use App\Support\DiskSpace;
 use App\Support\UploadLimits;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -38,6 +39,7 @@ class TransferController extends Controller
                     ->join('transfer_files', 'transfer_files.transfer_id', '=', 'transfers.id')
                     ->sum('transfer_files.received_bytes'),
             ],
+            'disk' => DiskSpace::forTransfers(),
         ]);
     }
 
