@@ -145,15 +145,19 @@ _Websites & Domains → Domain → Laravel_ (bzw. _Manage Laravel Application_):
 3. Im Reiter **Deployment** die Schritte _Fetch_, _Deploy source code from Git_, _Install composer.json dependencies_, _Install package.json dependencies_ und **Run deployment script** aktivieren. Als Deployment-Skript (_Edit script_):
 
     ```bash
-    npm run build
+    PATH=/opt/plesk/node/24/bin:$PATH /opt/plesk/node/24/bin/npm run build
     touch database/database.sqlite
-    php artisan migrate --force
-    [ -f storage/app/geoip/country.mmdb ] || php artisan geoip:install
-    php artisan optimize
-    php artisan queue:restart
+    /opt/plesk/php/8.4/bin/php artisan migrate --force
+    [ -f storage/app/geoip/country.mmdb ] || /opt/plesk/php/8.4/bin/php artisan geoip:install
+    /opt/plesk/php/8.4/bin/php artisan optimize
+    /opt/plesk/php/8.4/bin/php artisan queue:restart
     ```
 
-    Composer- und npm-Pakete installiert das Toolkit selbst (Schritte 4 und 5). Falls im Deploy-Protokoll eine falsche PHP-Version auftaucht, `php` durch den vollen Pfad ersetzen, z. B. `/opt/plesk/php/8.4/bin/php`.
+    Composer- und npm-Pakete installiert das Toolkit selbst (Schritte 4 und 5). Die vollen Pfade sorgen dafür, dass die richtigen Versionen laufen:
+    - `/opt/plesk/php/8.4/` an die PHP-Version der Domain anpassen.
+    - `/opt/plesk/node/24/` an die im Reiter **Node.js** gewählte Version anpassen (beide Stellen in der ersten Zeile). Benötigt wird **Node ≥ 22.18**.
+    - Der Node-Ordner muss zusätzlich in `PATH` stehen, weil `npm` und das Build-Tool intern `node` aufrufen.
+    - Installierte Versionen zeigt per SSH `ls /opt/plesk/php/ /opt/plesk/node/`. Meldet das Deploy-Protokoll „No such file or directory“, stimmt die Versionsnummer im Pfad nicht.
 
     > Wegen `php artisan optimize` ist die Konfiguration gecacht: Nach jeder Änderung an der `.env` einmal `php artisan optimize` ausführen (oder neu deployen).
 
