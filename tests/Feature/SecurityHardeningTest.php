@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Mail\TransferShared;
 use App\Models\Transfer;
 use App\Models\TransferFile;
+use App\Models\User;
 use App\Support\Markdown;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -89,6 +90,19 @@ class SecurityHardeningTest extends TestCase
         preg_match("/'nonce-([A-Za-z0-9]+)'/", $csp, $matches);
         $this->assertStringContainsString('<script nonce="'.$matches[1].'">', $response->getContent());
         $this->assertFalse($response->headers->has('X-Powered-By'));
+    }
+
+    public function test_response_headers_stay_small_enough_for_nginx()
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertOk();
+        $this->assertFalse($response->headers->has('Link'));
+
+        // nginx' default proxy/fastcgi buffer is 4 KB; larger headers cause 502 Bad Gateway.
+        $this->assertLessThan(3072, strlen((string) $response->headers));
     }
 
     public function test_appearance_cookie_cannot_inject_into_the_page()
