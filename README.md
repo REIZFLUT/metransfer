@@ -29,29 +29,29 @@ Danach läuft die App unter http://localhost:8000. Mails landen mit `MAIL_MAILER
 
 ## Benutzerverwaltung
 
-| Befehl | Zweck |
-|---|---|
-| `php artisan user:create` | Neuen Benutzer anlegen (interaktiv, oder `--name= --email= --password=`) |
-| `php artisan user:list` | Alle Benutzer mit 2FA-Status, Passkeys, Transfers |
-| `php artisan user:password {email}` | Passwort ändern |
-| `php artisan user:reset-2fa {email} [--passkeys]` | 2FA (und optional alle Passkeys) zurücksetzen, z. B. bei verlorenem Handy |
-| `php artisan user:delete {email} [--force]` | Benutzer samt allen Transfers und Dateien löschen |
-| `php artisan transfers:prune` | Abgelaufene Transfers / abgebrochene Uploads löschen (läuft stündlich per Scheduler) |
+| Befehl                                            | Zweck                                                                                |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `php artisan user:create`                         | Neuen Benutzer anlegen (interaktiv, oder `--name= --email= --password=`)             |
+| `php artisan user:list`                           | Alle Benutzer mit 2FA-Status, Passkeys, Transfers                                    |
+| `php artisan user:password {email}`               | Passwort ändern                                                                      |
+| `php artisan user:reset-2fa {email} [--passkeys]` | 2FA (und optional alle Passkeys) zurücksetzen, z. B. bei verlorenem Handy            |
+| `php artisan user:delete {email} [--force]`       | Benutzer samt allen Transfers und Dateien löschen                                    |
+| `php artisan transfers:prune`                     | Abgelaufene Transfers / abgebrochene Uploads löschen (läuft stündlich per Scheduler) |
 
-2FA und Passkeys richtet jeder Benutzer selbst unter *Einstellungen → Sicherheit* ein.
+2FA und Passkeys richtet jeder Benutzer selbst unter _Einstellungen → Sicherheit_ ein.
 
 ## Konfiguration
 
 In `.env` (Standardwerte in `config/transfers.php`):
 
-| Variable | Standard | Bedeutung |
-|---|---|---|
-| `TRANSFERS_DISK` | `local` | Speicher-Disk (`storage/app/private`) |
-| `TRANSFERS_CHUNK_SIZE` | `10485760` | Größe eines Upload-Stücks in Bytes (muss < `post_max_size` sein) |
-| `TRANSFERS_MAX_FILE_SIZE` | `0` | Maximale Dateigröße in Bytes, `0` = unbegrenzt |
-| `TRANSFERS_DEFAULT_EXPIRY_DAYS` | `7` | Vorausgewählte Gültigkeit |
-| `TRANSFERS_DRAFT_LIFETIME_HOURS` | `24` | Nach wie vielen Stunden abgebrochene Uploads gelöscht werden |
-| `TRANSFERS_NOTIFICATION_COOLDOWN` | `60` | Minuten zwischen zwei Download-Benachrichtigungen pro Transfer |
+| Variable                          | Standard   | Bedeutung                                                        |
+| --------------------------------- | ---------- | ---------------------------------------------------------------- |
+| `TRANSFERS_DISK`                  | `local`    | Speicher-Disk (`storage/app/private`)                            |
+| `TRANSFERS_CHUNK_SIZE`            | `10485760` | Größe eines Upload-Stücks in Bytes (muss < `post_max_size` sein) |
+| `TRANSFERS_MAX_FILE_SIZE`         | `0`        | Maximale Dateigröße in Bytes, `0` = unbegrenzt                   |
+| `TRANSFERS_DEFAULT_EXPIRY_DAYS`   | `7`        | Vorausgewählte Gültigkeit                                        |
+| `TRANSFERS_DRAFT_LIFETIME_HOURS`  | `24`       | Nach wie vielen Stunden abgebrochene Uploads gelöscht werden     |
+| `TRANSFERS_NOTIFICATION_COOLDOWN` | `60`       | Minuten zwischen zwei Download-Benachrichtigungen pro Transfer   |
 
 ## Betrieb auf einem Server (Nginx + PHP-FPM)
 

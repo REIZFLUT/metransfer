@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Transfer;
 use App\Models\TransferFile;
+use App\Support\UploadLimits;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -31,7 +32,7 @@ class TransferChunkController extends Controller
         }
 
         $offset = (int) $offset;
-        $maxChunk = (int) config('transfers.chunk_size');
+        $maxChunk = UploadLimits::chunkSize();
         $length = (int) $request->header('Content-Length', '0');
 
         if ($length <= 0 || $length > $maxChunk) {

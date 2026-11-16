@@ -8,6 +8,7 @@ use App\Models\Transfer;
 use App\Models\TransferFile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
@@ -26,7 +27,7 @@ class TransferUploadTest extends TestCase
     }
 
     /**
-     * @return TestResponse<\Illuminate\Http\Response>
+     * @return TestResponse<Response>
      */
     protected function sendChunk(Transfer $transfer, TransferFile $file, int $offset, string $data): TestResponse
     {

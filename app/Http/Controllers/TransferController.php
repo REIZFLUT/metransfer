@@ -8,6 +8,7 @@ use App\Http\Requests\Transfers\PublishTransferRequest;
 use App\Http\Requests\Transfers\UpdateTransferRequest;
 use App\Http\Resources\TransferResource;
 use App\Models\Transfer;
+use App\Support\UploadLimits;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,7 +44,7 @@ class TransferController extends Controller
     public function create(): Response
     {
         return Inertia::render('transfers/create', [
-            'chunkSize' => (int) config('transfers.chunk_size'),
+            'chunkSize' => UploadLimits::chunkSize(),
             'maxFileSize' => (int) config('transfers.max_file_size'),
             'expiryOptions' => config('transfers.expiry_options'),
             'defaultExpiry' => (int) config('transfers.default_expiry_days'),
@@ -59,7 +60,7 @@ class TransferController extends Controller
 
         return response()->json([
             'id' => $transfer->id,
-            'chunk_size' => (int) config('transfers.chunk_size'),
+            'chunk_size' => UploadLimits::chunkSize(),
         ], 201);
     }
 

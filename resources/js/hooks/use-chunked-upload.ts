@@ -32,6 +32,8 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
     });
 }
 
+class FatalUploadError extends Error {}
+
 function isAbort(error: unknown): boolean {
     return error instanceof DOMException && error.name === 'AbortError';
 }
@@ -172,7 +174,7 @@ export function useChunkedUpload(chunkSize: number) {
                         result.status !== 408 &&
                         result.status !== 429
                     ) {
-                        throw new Error(
+                        throw new FatalUploadError(
                             result.message ??
                                 `Upload fehlgeschlagen (${result.status})`,
                         );
@@ -180,7 +182,11 @@ export function useChunkedUpload(chunkSize: number) {
 
                     throw new Error(`Serverfehler (${result.status})`);
                 } catch (error) {
-                    if (isAbort(error) || retries >= MAX_RETRIES) {
+                    if (
+                        isAbort(error) ||
+                        error instanceof FatalUploadError ||
+                        retries >= MAX_RETRIES
+                    ) {
                         throw error;
                     }
 
