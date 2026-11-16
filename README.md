@@ -29,14 +29,19 @@ Danach läuft die App unter http://localhost:8000. Mails landen mit `MAIL_MAILER
 
 ## Benutzerverwaltung
 
-| Befehl                                            | Zweck                                                                                |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `php artisan user:create`                         | Neuen Benutzer anlegen (interaktiv, oder `--name= --email= --password=`)             |
-| `php artisan user:list`                           | Alle Benutzer mit 2FA-Status, Passkeys, Transfers                                    |
-| `php artisan user:password {email}`               | Passwort ändern                                                                      |
-| `php artisan user:reset-2fa {email} [--passkeys]` | 2FA (und optional alle Passkeys) zurücksetzen, z. B. bei verlorenem Handy            |
-| `php artisan user:delete {email} [--force]`       | Benutzer samt allen Transfers und Dateien löschen                                    |
-| `php artisan transfers:prune`                     | Abgelaufene Transfers / abgebrochene Uploads löschen (läuft stündlich per Scheduler) |
+| Befehl                                            | Zweck                                                                                                                             |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `php artisan user:create`                         | Neuen Benutzer anlegen (interaktiv, oder `--name= --email=` – ohne `--password` wird ein sicheres Passwort erzeugt und angezeigt) |
+| `php artisan user:list`                           | Alle Benutzer mit 2FA-Status, Passkeys, Transfers                                                                                 |
+| `php artisan user:password {email}`               | Passwort ändern (ohne Terminal: neues Passwort wird erzeugt und angezeigt)                                                        |
+| `php artisan user:reset-2fa {email} [--passkeys]` | 2FA (und optional alle Passkeys) zurücksetzen, z. B. bei verlorenem Handy                                                         |
+| `php artisan user:delete {email} [--force]`       | Benutzer samt allen Transfers und Dateien löschen (ohne Terminal `--force` nötig)                                                 |
+| `php artisan transfers:prune`                     | Abgelaufene Transfers / abgebrochene Uploads löschen (läuft stündlich per Scheduler)                                              |
+| `php artisan mail:test {email}`                   | Testmail sofort verschicken und die aktiven Mail-Einstellungen anzeigen                                                           |
+| `php artisan geoip:install`                       | Länderdatenbank installieren bzw. aktualisieren (läuft wöchentlich, wenn die Länder-Sperre aktiv ist)                             |
+| `php artisan geoip:lookup {ip}`                   | Prüfen, aus welchem Land eine IP kommt und ob sie den Login erreichen darf                                                        |
+
+> Im Artisan-Fenster des Plesk Laravel Toolkits nur den Befehl ohne `php artisan` eintragen, z. B. `mail:test du@example.com`. Argumente mit Leerzeichen funktionieren dort nicht zuverlässig.
 
 2FA und Passkeys richtet jeder Benutzer selbst unter _Einstellungen → Sicherheit_ ein.
 
@@ -163,11 +168,13 @@ _Websites & Domains → Domain → Laravel_ (bzw. _Manage Laravel Application_):
 
 4. Ersten Benutzer anlegen – im Toolkit unter _Artisan_ oder per SSH:
 
-    ```bash
-    php artisan user:create --name="Dein Name" --email=du@example.com
+    Im Artisan-Fenster des Toolkits (ohne `php artisan` davor, Name ohne Leerzeichen):
+
+    ```
+    user:create --name=Olli --email=du@example.com
     ```
 
-    Im Artisan-Fenster des Toolkits (ohne Terminal) wird ein sicheres Passwort erzeugt und **einmalig angezeigt** – notieren und nach dem ersten Login ändern. Per SSH wird das Passwort stattdessen abgefragt.
+    Es wird ein sicheres Passwort erzeugt und **einmalig angezeigt** – notieren und nach dem ersten Login ändern. Den vollständigen Namen kannst du danach unter _Einstellungen → Profil_ eintragen. Per SSH (`php artisan user:create`) werden Name und Passwort stattdessen abgefragt.
 
 ### 3. Scheduler und Queue einschalten
 
