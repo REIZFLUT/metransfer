@@ -57,21 +57,11 @@ In `.env` (Standardwerte in `config/transfers.php`):
 
 Optional sind **Login und Verwaltung** (Dashboard, Transfers, Einstellungen) nur aus bestimmten Ländern erreichbar – standardmäßig Deutschland. **Download-Links (`/t/…`) bleiben weltweit erreichbar**, damit Empfänger im Ausland ihre Dateien bekommen. IPs, die keinem Land zugeordnet werden können, werden gesperrt.
 
-Die Zuordnung IP → Land erfolgt lokal mit der kostenlosen **MaxMind GeoLite2**-Datenbank (keine Anfrage an Dritte pro Besuch).
+Die Zuordnung IP → Land erfolgt lokal mit einer Länderdatenbank auf dem Server – es geht bei Besuchen keine Anfrage an Dritte. Standardmäßig wird die freie **[DB-IP „IP to Country Lite“](https://db-ip.com/db/download/ip-to-country-lite)** genutzt: kein Account nötig, monatlich aktualisiert, Lizenz CC BY 4.0 (der vorgeschriebene Quellenhinweis „IP Geolocation by DB-IP“ wird bei aktiver Sperre automatisch klein auf der Login-Seite angezeigt).
 
 **Einrichtung:**
 
-1. Kostenlosen Account anlegen: https://www.maxmind.com/en/geolite2/signup → unter _Manage License Keys_ einen Lizenzschlüssel erzeugen.
-2. In der `.env`:
-
-    ```dotenv
-    MAXMIND_ACCOUNT_ID=123456
-    MAXMIND_LICENSE_KEY=xxxxxxxxxxxxxxxx
-    GEOBLOCK_COUNTRIES=DE              # z. B. DE,AT,CH
-    GEOBLOCK_ALLOWED_IPS=              # optional: IPs/Netze, die immer dürfen, z. B. 203.0.113.10,2001:db8::/32
-    ```
-
-3. Datenbank laden und prüfen (vor dem Einschalten!):
+1. Datenbank laden und mit deiner IP prüfen (vor dem Einschalten!):
 
     ```bash
     php artisan geoip:update
@@ -80,16 +70,25 @@ Die Zuordnung IP → Land erfolgt lokal mit der kostenlosen **MaxMind GeoLite2**
 
     `geoip:lookup` zeigt Land und ob der Zugriff erlaubt wäre. Deine aktuelle IP siehst du z. B. auf https://www.whatismyip.com.
 
-4. Erst dann einschalten: `GEOBLOCK_ENABLED=true` (und bei gecachter Config `php artisan optimize`).
+2. In der `.env` einschalten:
 
-Die Datenbank wird danach wöchentlich automatisch über den Scheduler aktualisiert.
+    ```dotenv
+    GEOBLOCK_ENABLED=true
+    GEOBLOCK_COUNTRIES=DE              # z. B. DE,AT,CH
+    GEOBLOCK_ALLOWED_IPS=              # optional: IPs/Netze, die immer dürfen, z. B. 203.0.113.10,2001:db8::/32
+    ```
+
+    Bei gecachter Config danach `php artisan optimize`.
+
+Die Datenbank wird danach wöchentlich automatisch über den Scheduler aktualisiert. Schlägt ein Update fehl, bleibt die bisherige Datenbank erhalten.
+
+**Alternativ MaxMind GeoLite2:** `GEOIP_SOURCE=maxmind`, `MAXMIND_ACCOUNT_ID` und `MAXMIND_LICENSE_KEY` setzen (kostenloser Account unter https://www.maxmind.com/en/geolite2/signup).
 
 **Hinweise:**
 
-- Fehlt die Datenbank, ist der Login-Bereich gesperrt (sicherer Standard). Im Notfall `GEOBLOCK_ENABLED=false` setzen oder deine IP in `GEOBLOCK_ALLOWED_IPS` eintragen – beides geht auch per SSH/Plesk-Dateimanager in der `.env`.
+- Fehlt die Datenbank, ist der Login-Bereich gesperrt (sicherer Standard). Im Notfall `GEOBLOCK_ENABLED=false` setzen oder deine IP in `GEOBLOCK_ALLOWED_IPS` eintragen – beides geht auch über den Plesk-Dateimanager in der `.env`.
 - Steht ein Reverse-Proxy oder Cloudflare vor der App, muss `TRUSTED_PROXIES` gesetzt sein (`*` oder die Proxy-IPs), sonst wird die IP des Proxys geprüft. Bei Plesk ohne Cloudflare ist das nicht nötig.
 - VPNs und Mobilfunk-IPs werden manchmal einem anderen Land zugeordnet. Für unterwegs: eigene IP/VPN in die Allowlist.
-- Diese Funktion nutzt GeoLite2-Daten von MaxMind, verfügbar unter https://www.maxmind.com.
 
 ## Betrieb mit Plesk (Laravel Toolkit)
 
@@ -163,7 +162,7 @@ _Websites & Domains → Domain → Laravel_ (bzw. _Manage Laravel Application_):
     php artisan user:create --name="Dein Name" --email=du@example.com
     ```
 
-    (Das Passwort wird abgefragt. Ohne SSH-Konsole zusätzlich `--password=...` angeben.)
+    Im Artisan-Fenster des Toolkits (ohne Terminal) wird ein sicheres Passwort erzeugt und **einmalig angezeigt** – notieren und nach dem ersten Login ändern. Per SSH wird das Passwort stattdessen abgefragt.
 
 ### 3. Scheduler und Queue einschalten
 

@@ -60,7 +60,9 @@ class RestrictToCountriesTest extends TestCase
 
     public function test_login_is_reachable_from_germany()
     {
-        $this->fromIp('91.0.0.1')->get(route('login'))->assertOk();
+        $this->fromIp('91.0.0.1')->get(route('login'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('geoipAttribution', true));
     }
 
     public function test_login_is_blocked_from_other_countries()
@@ -146,12 +148,12 @@ class RestrictToCountriesTest extends TestCase
             ->assertSuccessful();
     }
 
-    public function test_update_command_requires_credentials()
+    public function test_update_command_requires_maxmind_credentials()
     {
         Http::fake();
         config(['geoblock.maxmind.account_id' => null, 'geoblock.maxmind.license_key' => null]);
 
-        $this->artisan('geoip:update')->assertFailed();
+        $this->artisan('geoip:update', ['--source' => 'maxmind'])->assertFailed();
         Http::assertNothingSent();
     }
 
@@ -160,7 +162,7 @@ class RestrictToCountriesTest extends TestCase
         Http::fake(['download.maxmind.com/*' => Http::response('Unauthorized', 401)]);
         config(['geoblock.maxmind.account_id' => '123', 'geoblock.maxmind.license_key' => 'falsch']);
 
-        $this->artisan('geoip:update')
+        $this->artisan('geoip:update', ['--source' => 'maxmind'])
             ->expectsOutputToContain('HTTP 401')
             ->assertFailed();
     }

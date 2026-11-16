@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\InteractsWithoutTerminal;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
@@ -13,27 +14,48 @@ use function Laravel\Prompts\text;
 
 class CreateUserCommand extends Command
 {
+    use InteractsWithoutTerminal;
+
     protected $signature = 'user:create
         {--name= : Name des Benutzers}
         {--email= : E-Mail-Adresse des Benutzers}
-        {--password= : Passwort (nur für Skripte; sonst interaktiv abfragen)}';
+        {--password= : Passwort (ohne Angabe: interaktiv abfragen bzw. sicheres Passwort erzeugen)}';
 
     protected $description = 'Einen neuen Benutzer anlegen';
 
     public function handle(): int
     {
-        $name = $this->option('name') ?: text(
-            label: 'Name',
-            required: true,
-        );
+        $interactive = $this->canPrompt();
+        $name = $this->option('name');
+        $email = $this->option('email');
+        $password = $this->option('password');
 
-        $email = $this->option('email') ?: text(
+        if (! $interactive && (! $name || ! $email)) {
+            $this->components->error('Ohne Terminal bitte Name und E-Mail angeben:');
+            $this->line('  php artisan user:create --name="Dein Name" --email=du@example.com');
+            $this->line('  (Ohne --password wird ein sicheres Passwort erzeugt und angezeigt.)');
+
+            return self::FAILURE;
+        }
+
+        $name = $name ?: text(label: 'Name', required: true);
+
+        $email = $email ?: text(
             label: 'E-Mail-Adresse',
             required: true,
             validate: fn (string $value) => $this->validateEmail($value),
         );
 
-        $password = $this->option('password') ?: $this->askPassword();
+        $generated = false;
+
+        if (! $password) {
+            if ($interactive) {
+                $password = $this->askPassword();
+            } else {
+                $password = $this->generatePassword();
+                $generated = true;
+            }
+        }
 
         $validator = Validator::make(
             ['name' => $name, 'email' => $email, 'password' => $password],
@@ -56,6 +78,10 @@ class CreateUserCommand extends Command
         $user->forceFill(['email_verified_at' => now()])->save();
 
         $this->components->info("Benutzer {$user->email} wurde angelegt.");
+
+        if ($generated) {
+            $this->showGeneratedPassword($user->email, $password);
+        }
 
         return self::SUCCESS;
     }

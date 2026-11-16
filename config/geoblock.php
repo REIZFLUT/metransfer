@@ -41,16 +41,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | MaxMind GeoLite2 database
+    | Country database
     |--------------------------------------------------------------------------
     |
-    | Get a free license key at https://www.maxmind.com/en/geolite2/signup.
-    | `php artisan geoip:update` downloads the country database to the given
-    | path; it is refreshed weekly by the scheduler when a key is configured.
+    | `php artisan geoip:update` downloads the IP-to-country database to the
+    | given path; the scheduler refreshes it weekly.
+    |
+    | Sources:
+    |  - "dbip" (default): DB-IP "IP to Country Lite", free without an account,
+    |    licensed under CC BY 4.0 (https://db-ip.com), updated monthly.
+    |  - "maxmind": MaxMind GeoLite2 Country, requires a free account and
+    |    license key (https://www.maxmind.com/en/geolite2/signup).
     |
     */
 
-    'database_path' => env('GEOIP_DATABASE_PATH', storage_path('app/geoip/GeoLite2-Country.mmdb')),
+    'source' => env('GEOIP_SOURCE', 'dbip'),
+
+    'database_path' => env('GEOIP_DATABASE_PATH', storage_path('app/geoip/country.mmdb')),
+
+    'dbip' => [
+        'url' => env('DBIP_URL', 'https://download.db-ip.com/free/dbip-country-lite-{month}.mmdb.gz'),
+    ],
 
     'maxmind' => [
         'account_id' => env('MAXMIND_ACCOUNT_ID'),

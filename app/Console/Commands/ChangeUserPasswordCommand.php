@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\InteractsWithoutTerminal;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
@@ -11,9 +12,11 @@ use function Laravel\Prompts\password;
 
 class ChangeUserPasswordCommand extends Command
 {
+    use InteractsWithoutTerminal;
+
     protected $signature = 'user:password
         {email : E-Mail-Adresse des Benutzers}
-        {--password= : Neues Passwort (nur für Skripte; sonst interaktiv abfragen)}';
+        {--password= : Neues Passwort (ohne Angabe: interaktiv abfragen bzw. sicheres Passwort erzeugen)}';
 
     protected $description = 'Das Passwort eines Benutzers ändern';
 
@@ -28,8 +31,9 @@ class ChangeUserPasswordCommand extends Command
         }
 
         $newPassword = $this->option('password');
+        $generated = false;
 
-        if (! $newPassword) {
+        if (! $newPassword && $this->canPrompt()) {
             $newPassword = password(label: 'Neues Passwort', required: true);
 
             if ($newPassword !== password(label: 'Passwort bestätigen', required: true)) {
@@ -37,6 +41,9 @@ class ChangeUserPasswordCommand extends Command
 
                 return self::FAILURE;
             }
+        } elseif (! $newPassword) {
+            $newPassword = $this->generatePassword();
+            $generated = true;
         }
 
         $validator = Validator::make(
@@ -53,6 +60,10 @@ class ChangeUserPasswordCommand extends Command
         $user->forceFill(['password' => $newPassword])->save();
 
         $this->components->info("Passwort für {$user->email} wurde geändert.");
+
+        if ($generated) {
+            $this->showGeneratedPassword($user->email, $newPassword);
+        }
 
         return self::SUCCESS;
     }

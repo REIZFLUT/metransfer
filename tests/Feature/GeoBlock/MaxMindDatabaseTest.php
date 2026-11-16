@@ -61,7 +61,7 @@ class MaxMindDatabaseTest extends TestCase
 
         Http::fake(['download.maxmind.com/*' => Http::response(file_get_contents($tmp.'/db.tar.gz'))]);
 
-        $this->artisan('geoip:update')->assertSuccessful();
+        $this->artisan('geoip:update', ['--source' => 'maxmind'])->assertSuccessful();
 
         Http::assertSent(fn ($request) => $request->hasHeader('Authorization', 'Basic '.base64_encode('123:key'))
             && str_contains($request->url(), 'GeoLite2-Country/download'));
@@ -69,6 +69,48 @@ class MaxMindDatabaseTest extends TestCase
         $this->assertFileExists($target);
         $this->assertSame('SE', (new MaxMindCountryResolver($target))->country('89.160.20.112'));
 
+        File::deleteDirectory($tmp);
+    }
+
+    public function test_update_command_downloads_dbip_database_without_account()
+    {
+        $tmp = sys_get_temp_dir().'/dbip-test-'.uniqid();
+        File::ensureDirectoryExists($tmp);
+        $target = $tmp.'/installed/country.mmdb';
+
+        config(['geoblock.database_path' => $target, 'geoblock.source' => 'dbip']);
+
+        $currentMonth = now()->format('Y-m');
+        $previousMonth = now()->startOfMonth()->subMonth()->format('Y-m');
+
+        // Current month not published yet -> falls back to the previous month.
+        Http::fake([
+            "download.db-ip.com/free/dbip-country-lite-{$currentMonth}.mmdb.gz" => Http::response('', 404),
+            "download.db-ip.com/free/dbip-country-lite-{$previousMonth}.mmdb.gz" => Http::response(gzencode(file_get_contents($this->fixture))),
+        ]);
+
+        $this->artisan('geoip:update')->assertSuccessful();
+
+        Http::assertSentCount(2);
+        Http::assertSent(fn ($request) => ! $request->hasHeader('Authorization'));
+        $this->assertSame('SE', (new MaxMindCountryResolver($target))->country('89.160.20.112'));
+
+        File::deleteDirectory($tmp);
+    }
+
+    public function test_update_command_keeps_old_database_on_failure()
+    {
+        $tmp = sys_get_temp_dir().'/dbip-test-'.uniqid();
+        File::ensureDirectoryExists($tmp);
+        $target = $tmp.'/country.mmdb';
+        copy($this->fixture, $target);
+
+        config(['geoblock.database_path' => $target]);
+        Http::fake(['download.db-ip.com/*' => Http::response(gzencode('kaputt'))]);
+
+        $this->artisan('geoip:update')->assertFailed();
+
+        $this->assertFileEquals($this->fixture, $target);
         File::deleteDirectory($tmp);
     }
 }

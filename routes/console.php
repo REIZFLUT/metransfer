@@ -6,4 +6,4 @@ Schedule::command('transfers:prune')->hourly()->withoutOverlapping();
 
 Schedule::command('geoip:update')
     ->weekly()
-    ->when(fn () => filled(config('geoblock.maxmind.license_key')));
+    ->when(fn () => (bool) config('geoblock.enabled'));

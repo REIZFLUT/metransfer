@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { Globe } from 'lucide-react';
+import GeoIpAttribution from '@/components/geoip-attribution';
 import {
     Card,
     CardDescription,
@@ -27,6 +28,9 @@ export default function Blocked() {
                     </CardDescription>
                 </CardHeader>
             </Card>
+            <div className="mt-4">
+                <GeoIpAttribution />
+            </div>
         </>
     );
 }

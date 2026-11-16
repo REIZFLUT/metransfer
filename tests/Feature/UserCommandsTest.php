@@ -53,6 +53,50 @@ class UserCommandsTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'olli@example.com']);
     }
 
+    public function test_user_create_without_terminal_generates_a_password()
+    {
+        $this->artisan('user:create', [
+            '--name' => 'Olli',
+            '--email' => 'olli@example.com',
+            '--no-interaction' => true,
+        ])
+            ->expectsOutputToContain('Passwort')
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('users', ['email' => 'olli@example.com']);
+    }
+
+    public function test_user_create_without_terminal_requires_name_and_email()
+    {
+        $this->artisan('user:create', ['--no-interaction' => true])
+            ->expectsOutputToContain('--name=')
+            ->assertFailed();
+
+        $this->assertSame(0, User::count());
+    }
+
+    public function test_user_delete_without_terminal_requires_force()
+    {
+        $user = User::factory()->create();
+
+        $this->artisan('user:delete', ['email' => $user->email, '--no-interaction' => true])
+            ->expectsOutputToContain('--force')
+            ->assertFailed();
+
+        $this->assertModelExists($user);
+    }
+
+    public function test_password_can_be_generated_without_terminal()
+    {
+        $user = User::factory()->create();
+        $old = $user->password;
+
+        $this->artisan('user:password', ['email' => $user->email, '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $this->assertNotSame($old, $user->fresh()->password);
+    }
+
     public function test_password_can_be_changed()
     {
         $user = User::factory()->create();
