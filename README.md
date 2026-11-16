@@ -53,7 +53,106 @@ In `.env` (Standardwerte in `config/transfers.php`):
 | `TRANSFERS_DRAFT_LIFETIME_HOURS`  | `24`       | Nach wie vielen Stunden abgebrochene Uploads gelöscht werden     |
 | `TRANSFERS_NOTIFICATION_COOLDOWN` | `60`       | Minuten zwischen zwei Download-Benachrichtigungen pro Transfer   |
 
-## Betrieb auf einem Server (Nginx + PHP-FPM)
+## Betrieb mit Plesk (Laravel Toolkit)
+
+MeTransfer enthält das Paket [`plesk/ext-laravel-integration`](https://github.com/plesk/ext-laravel-integration). Damit lässt sich der Queue-Worker (für den Mailversand) direkt im **Plesk Laravel Toolkit** ein- und ausschalten und konfigurieren – ohne Supervisor oder systemd.
+
+So funktioniert es: Plesk schreibt die Queue-Einstellungen in die Datei `.env.plesk` im Projektverzeichnis. Das Paket liest sie und meldet die Worker beim Laravel-Scheduler an. Deshalb müssen in Plesk die **Scheduled Tasks** aktiv sein – darüber läuft auch das stündliche Aufräumen (`transfers:prune`).
+
+### 1. Domain und PHP vorbereiten
+
+- *Websites & Domains → Domain → Hosting & DNS → Hosting*: **Document Root** auf `httpdocs/public` setzen (bzw. `<Projektordner>/public`).
+- *PHP-Einstellungen*: PHP ≥ 8.3 (FPM), und:
+  - `post_max_size` = `20M`
+  - `upload_max_filesize` = `20M`
+  - `memory_limit` = `256M`
+  - `max_execution_time` = `300`
+  - `open_basedir` = **`none`** – sonst kann das Toolkit die Queues nicht steuern ([Plesk-Hinweis](https://support.plesk.com/hc/en-us/articles/12376918716695))
+- *Apache & nginx Settings → Additional nginx directives*:
+
+  ```nginx
+  client_max_body_size 20M;
+  ```
+
+- SSL/TLS-Zertifikat (z. B. Let's Encrypt) aktivieren – Passkeys funktionieren nur über HTTPS.
+
+### 2. App über das Laravel Toolkit installieren
+
+*Websites & Domains → Domain → Laravel* (bzw. *Manage Laravel Application*):
+
+1. Anwendung aus dem Git-Repository `git@github.com:REIZFLUT/metransfer.git` anlegen (für ein privates Repo den von Plesk angezeigten SSH-Key als *Deploy Key* bei GitHub hinterlegen).
+2. Im Reiter **Environment** (`.env`) mindestens setzen:
+
+   ```dotenv
+   APP_NAME=MeTransfer
+   APP_ENV=production
+   APP_DEBUG=false
+   APP_URL=https://transfer.example.com
+   APP_LOCALE=de
+   APP_FALLBACK_LOCALE=de
+   SESSION_SECURE_COOKIE=true
+   DB_CONNECTION=sqlite
+   QUEUE_CONNECTION=database
+   CACHE_STORE=database
+   MAIL_MAILER=smtp
+   MAIL_HOST=...
+   MAIL_PORT=587
+   MAIL_USERNAME=...
+   MAIL_PASSWORD=...
+   MAIL_FROM_ADDRESS="transfer@example.com"
+   MAIL_FROM_NAME="MeTransfer"
+   ```
+
+   `APP_KEY` mit *Artisan → `key:generate`* erzeugen, falls leer.
+3. Im Reiter **Deployment** als Deploy-Skript (Plesk führt es nach jedem Pull aus):
+
+   ```bash
+   composer install --no-dev --optimize-autoloader --no-interaction
+   npm ci
+   npm run build
+   touch database/database.sqlite
+   php artisan migrate --force
+   php artisan optimize
+   php artisan queue:restart
+   ```
+
+   (Je nach Toolkit-Version heißen die Felder etwas anders – entscheidend ist, dass diese Befehle nach jedem Pull laufen.)
+
+4. Ersten Benutzer anlegen – im Toolkit unter *Artisan* oder per SSH:
+
+   ```bash
+   php artisan user:create --name="Dein Name" --email=du@example.com
+   ```
+
+   (Das Passwort wird abgefragt. Ohne SSH-Konsole zusätzlich `--password=...` angeben.)
+
+### 3. Scheduler und Queue einschalten
+
+Im Laravel Toolkit auf dem Reiter **Dashboard**:
+
+1. **Scheduled Tasks** aktivieren.
+2. **Queues** aktivieren und eine Queue mit dem Namen **`default`** anlegen (MeTransfer nutzt nur diese).
+   Empfohlene Einstellungen (Feldnamen sinngemäß):
+
+   | Einstellung | Wert | Warum |
+   |---|---|---|
+   | Anzahl Worker | `1` | reicht für Mails völlig |
+   | Max. Laufzeit (`max-time`) | `3540` | Worker startet stündlich frisch (z. B. nach Deployments) |
+   | Timeout | leer (Standard 60 s) | |
+   | Stop when empty | aus | |
+
+Prüfen lässt sich die Konfiguration im Toolkit unter *Artisan*:
+
+```bash
+php artisan plesk-ext-laravel:list-env
+php artisan schedule:list
+```
+
+`schedule:list` muss dann einen Eintrag `queue:work ... --queue=default` und `transfers:prune` zeigen.
+
+> Nach einem Deployment sorgt `php artisan queue:restart` (im Deploy-Skript) dafür, dass der laufende Worker sich beendet; der Scheduler startet innerhalb einer Minute einen neuen mit dem aktuellen Code. Die `max-time` ist eine zusätzliche Absicherung.
+
+## Betrieb auf einem eigenen Server (Nginx + PHP-FPM, ohne Plesk)
 
 ### Voraussetzungen
 
