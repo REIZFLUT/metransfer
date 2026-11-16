@@ -53,6 +53,44 @@ In `.env` (Standardwerte in `config/transfers.php`):
 | `TRANSFERS_DRAFT_LIFETIME_HOURS`  | `24`       | Nach wie vielen Stunden abgebrochene Uploads gelöscht werden     |
 | `TRANSFERS_NOTIFICATION_COOLDOWN` | `60`       | Minuten zwischen zwei Download-Benachrichtigungen pro Transfer   |
 
+## Länder-Sperre (nur Deutschland)
+
+Optional sind **Login und Verwaltung** (Dashboard, Transfers, Einstellungen) nur aus bestimmten Ländern erreichbar – standardmäßig Deutschland. **Download-Links (`/t/…`) bleiben weltweit erreichbar**, damit Empfänger im Ausland ihre Dateien bekommen. IPs, die keinem Land zugeordnet werden können, werden gesperrt.
+
+Die Zuordnung IP → Land erfolgt lokal mit der kostenlosen **MaxMind GeoLite2**-Datenbank (keine Anfrage an Dritte pro Besuch).
+
+**Einrichtung:**
+
+1. Kostenlosen Account anlegen: https://www.maxmind.com/en/geolite2/signup → unter _Manage License Keys_ einen Lizenzschlüssel erzeugen.
+2. In der `.env`:
+
+    ```dotenv
+    MAXMIND_ACCOUNT_ID=123456
+    MAXMIND_LICENSE_KEY=xxxxxxxxxxxxxxxx
+    GEOBLOCK_COUNTRIES=DE              # z. B. DE,AT,CH
+    GEOBLOCK_ALLOWED_IPS=              # optional: IPs/Netze, die immer dürfen, z. B. 203.0.113.10,2001:db8::/32
+    ```
+
+3. Datenbank laden und prüfen (vor dem Einschalten!):
+
+    ```bash
+    php artisan geoip:update
+    php artisan geoip:lookup DEINE.IP.ADRESSE
+    ```
+
+    `geoip:lookup` zeigt Land und ob der Zugriff erlaubt wäre. Deine aktuelle IP siehst du z. B. auf https://www.whatismyip.com.
+
+4. Erst dann einschalten: `GEOBLOCK_ENABLED=true` (und bei gecachter Config `php artisan optimize`).
+
+Die Datenbank wird danach wöchentlich automatisch über den Scheduler aktualisiert.
+
+**Hinweise:**
+
+- Fehlt die Datenbank, ist der Login-Bereich gesperrt (sicherer Standard). Im Notfall `GEOBLOCK_ENABLED=false` setzen oder deine IP in `GEOBLOCK_ALLOWED_IPS` eintragen – beides geht auch per SSH/Plesk-Dateimanager in der `.env`.
+- Steht ein Reverse-Proxy oder Cloudflare vor der App, muss `TRUSTED_PROXIES` gesetzt sein (`*` oder die Proxy-IPs), sonst wird die IP des Proxys geprüft. Bei Plesk ohne Cloudflare ist das nicht nötig.
+- VPNs und Mobilfunk-IPs werden manchmal einem anderen Land zugeordnet. Für unterwegs: eigene IP/VPN in die Allowlist.
+- Diese Funktion nutzt GeoLite2-Daten von MaxMind, verfügbar unter https://www.maxmind.com.
+
 ## Betrieb mit Plesk (Laravel Toolkit)
 
 MeTransfer enthält das Paket [`plesk/ext-laravel-integration`](https://github.com/plesk/ext-laravel-integration). Damit lässt sich der Queue-Worker (für den Mailversand) direkt im **Plesk Laravel Toolkit** ein- und ausschalten und konfigurieren – ohne Supervisor oder systemd.
@@ -61,70 +99,71 @@ So funktioniert es: Plesk schreibt die Queue-Einstellungen in die Datei `.env.pl
 
 ### 1. Domain und PHP vorbereiten
 
-- *Websites & Domains → Domain → Hosting & DNS → Hosting*: **Document Root** auf `httpdocs/public` setzen (bzw. `<Projektordner>/public`).
-- *PHP-Einstellungen*: PHP ≥ 8.3 (FPM), und:
-  - `post_max_size` = `20M`
-  - `upload_max_filesize` = `20M`
-  - `memory_limit` = `256M`
-  - `max_execution_time` = `300`
-  - `open_basedir` = **`none`** – sonst kann das Toolkit die Queues nicht steuern ([Plesk-Hinweis](https://support.plesk.com/hc/en-us/articles/12376918716695))
-- *Apache & nginx Settings → Additional nginx directives*:
+- _Websites & Domains → Domain → Hosting & DNS → Hosting_: **Document Root** auf `httpdocs/public` setzen (bzw. `<Projektordner>/public`).
+- _PHP-Einstellungen_: PHP ≥ 8.3 (FPM), und:
+    - `post_max_size` = `20M`
+    - `upload_max_filesize` = `20M`
+    - `memory_limit` = `256M`
+    - `max_execution_time` = `300`
+    - `open_basedir` = **`none`** – sonst kann das Toolkit die Queues nicht steuern ([Plesk-Hinweis](https://support.plesk.com/hc/en-us/articles/12376918716695))
+- _Apache & nginx Settings → Additional nginx directives_:
 
-  ```nginx
-  client_max_body_size 20M;
-  ```
+    ```nginx
+    client_max_body_size 20M;
+    ```
 
 - SSL/TLS-Zertifikat (z. B. Let's Encrypt) aktivieren – Passkeys funktionieren nur über HTTPS.
 
 ### 2. App über das Laravel Toolkit installieren
 
-*Websites & Domains → Domain → Laravel* (bzw. *Manage Laravel Application*):
+_Websites & Domains → Domain → Laravel_ (bzw. _Manage Laravel Application_):
 
-1. Anwendung aus dem Git-Repository `git@github.com:REIZFLUT/metransfer.git` anlegen (für ein privates Repo den von Plesk angezeigten SSH-Key als *Deploy Key* bei GitHub hinterlegen).
+1. Anwendung aus dem Git-Repository `git@github.com:REIZFLUT/metransfer.git` anlegen (für ein privates Repo den von Plesk angezeigten SSH-Key als _Deploy Key_ bei GitHub hinterlegen).
 2. Im Reiter **Environment** (`.env`) mindestens setzen:
 
-   ```dotenv
-   APP_NAME=MeTransfer
-   APP_ENV=production
-   APP_DEBUG=false
-   APP_URL=https://transfer.example.com
-   APP_LOCALE=de
-   APP_FALLBACK_LOCALE=de
-   SESSION_SECURE_COOKIE=true
-   DB_CONNECTION=sqlite
-   QUEUE_CONNECTION=database
-   CACHE_STORE=database
-   MAIL_MAILER=smtp
-   MAIL_HOST=...
-   MAIL_PORT=587
-   MAIL_USERNAME=...
-   MAIL_PASSWORD=...
-   MAIL_FROM_ADDRESS="transfer@example.com"
-   MAIL_FROM_NAME="MeTransfer"
-   ```
+    ```dotenv
+    APP_NAME=MeTransfer
+    APP_ENV=production
+    APP_DEBUG=false
+    APP_URL=https://transfer.example.com
+    APP_LOCALE=de
+    APP_FALLBACK_LOCALE=de
+    SESSION_SECURE_COOKIE=true
+    DB_CONNECTION=sqlite
+    QUEUE_CONNECTION=database
+    CACHE_STORE=database
+    MAIL_MAILER=smtp
+    MAIL_HOST=...
+    MAIL_PORT=587
+    MAIL_USERNAME=...
+    MAIL_PASSWORD=...
+    MAIL_FROM_ADDRESS="transfer@example.com"
+    MAIL_FROM_NAME="MeTransfer"
+    ```
 
-   `APP_KEY` mit *Artisan → `key:generate`* erzeugen, falls leer.
+    `APP_KEY` mit _Artisan → `key:generate`_ erzeugen, falls leer.
+
 3. Im Reiter **Deployment** als Deploy-Skript (Plesk führt es nach jedem Pull aus):
 
-   ```bash
-   composer install --no-dev --optimize-autoloader --no-interaction
-   npm ci
-   npm run build
-   touch database/database.sqlite
-   php artisan migrate --force
-   php artisan optimize
-   php artisan queue:restart
-   ```
+    ```bash
+    composer install --no-dev --optimize-autoloader --no-interaction
+    npm ci
+    npm run build
+    touch database/database.sqlite
+    php artisan migrate --force
+    php artisan optimize
+    php artisan queue:restart
+    ```
 
-   (Je nach Toolkit-Version heißen die Felder etwas anders – entscheidend ist, dass diese Befehle nach jedem Pull laufen.)
+    (Je nach Toolkit-Version heißen die Felder etwas anders – entscheidend ist, dass diese Befehle nach jedem Pull laufen.)
 
-4. Ersten Benutzer anlegen – im Toolkit unter *Artisan* oder per SSH:
+4. Ersten Benutzer anlegen – im Toolkit unter _Artisan_ oder per SSH:
 
-   ```bash
-   php artisan user:create --name="Dein Name" --email=du@example.com
-   ```
+    ```bash
+    php artisan user:create --name="Dein Name" --email=du@example.com
+    ```
 
-   (Das Passwort wird abgefragt. Ohne SSH-Konsole zusätzlich `--password=...` angeben.)
+    (Das Passwort wird abgefragt. Ohne SSH-Konsole zusätzlich `--password=...` angeben.)
 
 ### 3. Scheduler und Queue einschalten
 
@@ -134,14 +173,14 @@ Im Laravel Toolkit auf dem Reiter **Dashboard**:
 2. **Queues** aktivieren und eine Queue mit dem Namen **`default`** anlegen (MeTransfer nutzt nur diese).
    Empfohlene Einstellungen (Feldnamen sinngemäß):
 
-   | Einstellung | Wert | Warum |
-   |---|---|---|
-   | Anzahl Worker | `1` | reicht für Mails völlig |
-   | Max. Laufzeit (`max-time`) | `3540` | Worker startet stündlich frisch (z. B. nach Deployments) |
-   | Timeout | leer (Standard 60 s) | |
-   | Stop when empty | aus | |
+    | Einstellung                | Wert                 | Warum                                                    |
+    | -------------------------- | -------------------- | -------------------------------------------------------- |
+    | Anzahl Worker              | `1`                  | reicht für Mails völlig                                  |
+    | Max. Laufzeit (`max-time`) | `3540`               | Worker startet stündlich frisch (z. B. nach Deployments) |
+    | Timeout                    | leer (Standard 60 s) |                                                          |
+    | Stop when empty            | aus                  |                                                          |
 
-Prüfen lässt sich die Konfiguration im Toolkit unter *Artisan*:
+Prüfen lässt sich die Konfiguration im Toolkit unter _Artisan_:
 
 ```bash
 php artisan plesk-ext-laravel:list-env

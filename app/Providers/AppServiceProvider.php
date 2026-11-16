@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Support\GeoIp\CountryResolver;
+use App\Support\GeoIp\MaxMindCountryResolver;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -15,7 +18,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(CountryResolver::class, fn () => new MaxMindCountryResolver(
+            (string) config('geoblock.database_path'),
+        ));
     }
 
     /**
@@ -24,6 +29,19 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureTrustedProxies();
+    }
+
+    /**
+     * Trust reverse proxies (configured at runtime so it works with a cached config).
+     */
+    protected function configureTrustedProxies(): void
+    {
+        $proxies = config('geoblock.trusted_proxies');
+
+        if (is_string($proxies) && $proxies !== '') {
+            TrustProxies::at($proxies === '*' ? '*' : array_map('trim', explode(',', $proxies)));
+        }
     }
 
     /**
